@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+	<head>
+		<meta charset="utf-8">
+		<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+		<link rel="stylesheet" media="all" type="text/css" href="../sudokuJS.css">
+		<style>
+			* {
+				margin:0; padding:0;
+				-moz-box-sizing: border-box;
+				-webkit-box-sizing: border-box;
+				box-sizing: border-box;
+			}
+			.wrap {
+				padding: 2em 1em;
+				width: 400px;
+				max-width: 100%;
+				margin-left: auto;
+				margin-right: auto;
+			}
+
+			@media(min-width: 30em){
+				.wrap{
+					width: 490px;
+				}
+				.sudoku-board input {
+					font-size: 24px;
+					font-size: 1.5rem;
+				}
+				.sudoku-board .candidates {
+					font-size: .8em;
+				}
+			}
+
+		</style>
+
+		<title>Sudoku-For cognitive load</title>
+
+		<script type="text/javascript" src="http://code.jquery.com/jquery-2.1.0.min.js"></script>
+		<script type="text/javascript" src="../sudokuJS.js"></script>
+	</head>
+
+	<body>
+
+
+	<div>
+		<button id="record">Record</button>
+		<button id="stop" disabled>Stop</button>
+		<button id="play" disabled>Play</button>
+		<button id="save" disabled>Save</button>
+		<button id="soundstart">PlaySound</button>
+		<button id="soundend" disabled>StopSound</button>
+
+		<script>
+			const recordAudio = () =>
+			  new Promise(async resolve => {
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				const mediaRecorder = new MediaRecorder(stream);
+				let audioChunks = [];
+	  
+				mediaRecorder.addEventListener('dataavailable', event => {
+				  audioChunks.push(event.data);
+				});
+	  
+				const start = () => {
+				  audioChunks = [];
+				  mediaRecorder.start();
+				};
+	  
+				const stop = () =>
+				  new Promise(resolve => {
+					mediaRecorder.addEventListener('stop', () => {
+					  const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+					  const audioUrl = URL.createObjectURL(audioBlob);
+					  const audio = new Audio(audioUrl);
+					  const play = () => audio.play();
+					  resolve({ audioChunks, audioBlob, audioUrl, play });
+					});
+	  
+					mediaRecorder.stop();
+				  });
+	  
+				resolve({ start, stop });
+			  });
+			
+			//   const play = (frequency = 300, duration = 1e3) => {
+			// 	const context = new AudioContext();
+			// 	const gainNode = context.createGain();
+			// 	const oscillator = context.createOscillator();
+			// 	oscillator.frequency.value = frequency;
+			// 	oscillator.connect(gainNode);
+			// 	gainNode.connect(context.destination);
+			// 	oscillator.start(0);
+			// 	setTimeout(() => oscillator.stop(), duration);
+			// 	};
+
+			const soundControl = (frequency = 300) =>
+			  new Promise(async resolve=>{
+				const context = new AudioContext();
+				const gainNode = context.createGain();
+				const oscillator = context.createOscillator();
+				oscillator.frequency.value = frequency;
+				oscillator.connect(gainNode);
+				gainNode.connect(context.destination);
+				
+				const start = () => {
+					oscillator.start(0);
+				};
+
+				const stop = () =>{
+					oscillator.stop()
+				}
+
+				resolve({ start, stop });
+			  })
+			  
+							
+			const sleep = time => new Promise(resolve => setTimeout(resolve, time));
+	  
+			const recordButton = document.querySelector('#record');
+			const stopButton = document.querySelector('#stop');
+			const playButton = document.querySelector('#play');
+			const saveButton = document.querySelector('#save');
+			const soundStartButton = document.querySelector('#soundstart');
+			const soundStopButton = document.querySelector('#soundend')
+			
+			const savedAudioMessagesContainer = document.querySelector('#saved-audio-messages');
+	  
+			let recorder;
+			let audio;
+			let sound;
+
+			soundStartButton.addEventListener('click', async () => {
+			  if(!sound){
+				sound = await soundControl(18000);
+			  }
+				soundStartButton.setAttribute('disabled', true);
+				soundStopButton.removeAttribute('disabled');
+				sound.start();
+			  	// play();
+			});
+			
+			soundStopButton.addEventListener('click', async () => {
+				soundStopButton.setAttribute('disabled', true);
+				soundStartButton.removeAttribute('disabled');
+				sound.stop();
+				sound = null;
+			});
+
+			recordButton.addEventListener('click', async () => {
+			  recordButton.setAttribute('disabled', true);
+			  stopButton.removeAttribute('disabled');
+			  playButton.setAttribute('disabled', true);
+			  saveButton.setAttribute('disabled', true);
+			  if (!recorder) {
+				recorder = await recordAudio();
+			  }
+			  recorder.start();
+			});
+	  
+			stopButton.addEventListener('click', async () => {
+			  recordButton.removeAttribute('disabled');
+			  stopButton.setAttribute('disabled', true);
+			  playButton.removeAttribute('disabled');
+			  saveButton.removeAttribute('disabled');
+			  audio = await recorder.stop();
+			});
+	  
+			playButton.addEventListener('click', () => {
+			  audio.play();
+			});
+	  
+			saveButton.addEventListener('click', () => {
+			  const reader = new FileReader();
+			  reader.readAsDataURL(audio.audioBlob);
+			  reader.onload = () => {
+				const base64AudioMessage = reader.result.split(',')[1];
+	  
+				fetch('/messages', {
+				  method: 'POST',
+				  headers: { 'Content-Type': 'application/json' },
+				  body: JSON.stringify({ message: base64AudioMessage })
+				}).then(res => {
+				  if (res.status === 201) {
+					return populateAudioMessages();
+				  }
+				  console.log('Invalid status saving audio message: ' + res.status);
+				});
+			  };
+			});
+	  
+			const populateAudioMessages = () => {
+			  return fetch('/messages').then(res => {
+				if (res.status === 200) {
+				  return res.json().then(json => {
+					json.messageFilenames.forEach(filename => {
+					  let audioElement = document.querySelector(`[data-audio-filename="${filename}"]`);
+					  if (!audioElement) {
+						audioElement = document.createElement('audio');
+						audioElement.src = `/messages/${filename}`;
+						audioElement.setAttribute('data-audio-filename', filename);
+						audioElement.setAttribute('controls', true);
+						savedAudioMessagesContainer.appendChild(audioElement);
+					  }
+					});
+				  });
+				}
+				console.log('Invalid status getting messages: ' + res.status);
+			  });
+			};
+	  
+			populateAudioMessages();
+		  </script>
+	</div>
+	<div class="wrap">
+		<h1>Sudoku YG</h1>
+		<!--the only required html-->
+		<div id="sudoku" class="sudoku-board">
+		</div>
+
+		<!-- solve buttons
+		Solve: <button type="button" class="sudokubutton5 js-solve-step-btn">One Step</button>
+		<button type="button" class="sudokubutton6 js-solve-all-btn">All</button>
+		<div id="finish"> abc </h1>> -->
+	</div>
+
+	<script>
+		var board = [
+			 ,5, , , ,2,3,8,
+			, ,1, , , ,4, , ,5
+			, ,2, , ,5, , , ,
+			,5, ,7,8, , ,2,1,
+			,4,6, ,2,3,7, ,5,8
+			, ,9,8, , ,5,4, ,7
+			, , , , ,6, , ,4,
+			,1, , ,9, , , ,6,
+			, ,7,3,4, , , ,9,undefined
+		]
+		//NOTE: if last cell of board is empty 'undefined' has to be used as value!
+
+		var mySudokuJS = $("#sudoku").sudokuJS({
+			board: board,
+			boardFinishedFn: function(data){
+				//ONLY IF board was solved by solver:
+				//data.difficultyInfo {
+				//	level: "easy", "medium", "hard"
+				//	,score: int [experimental]
+				//}
+				alert("board was finished!");
+			}
+		});
+
+		$(".js-solve-step-btn").on("click", mySudokuJS.solveStep);
+		$(".js-solve-all-btn").on("click", mySudokuJS.solveAll);
+
+	
+	</script>
+	</body>
+</html>
