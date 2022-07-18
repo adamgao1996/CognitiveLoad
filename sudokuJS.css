@@ -140,3 +140,18 @@ background-color: #EDEDED;
 color: #040404;
 cursor: pointer;
 }
+
+#timer {
+    font-size:50px;
+    margin:0 auto;
+    width:1000px;
+}
+  
+#controls {
+    margin:0 auto;
+    width:600px;    
+}
+  
+#controls button {
+    font-size:24px;
+}
