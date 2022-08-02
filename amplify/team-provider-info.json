@@ -1,0 +1,21 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-cognitiveload-dev-165005-authRole",
+      "UnauthRoleArn": "arn:aws:iam::567299252926:role/amplify-cognitiveload-dev-165005-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::567299252926:role/amplify-cognitiveload-dev-165005-authRole",
+      "Region": "us-east-2",
+      "DeploymentBucketName": "amplify-cognitiveload-dev-165005-deployment",
+      "UnauthRoleName": "amplify-cognitiveload-dev-165005-unauthRole",
+      "StackName": "amplify-cognitiveload-dev-165005",
+      "StackId": "arn:aws:cloudformation:us-east-2:567299252926:stack/amplify-cognitiveload-dev-165005/dc5afa60-0eb6-11ed-b702-02b2861294e0",
+      "AmplifyAppId": "d2x3b8rq8l1ifh"
+    },
+    "categories": {
+      "auth": {
+        "cognitiveload0b638970": {},
+        "true": {}
+      }
+    }
+  }
+}

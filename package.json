@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@aws-amplify/analytics": "^5.2.15",
+    "@aws-amplify/interactions": "^4.0.48",
+    "@aws-amplify/storage": "^4.5.1",
+    "@aws-amplify/ui": "^3.12.4",
+    "@aws-amplify/xr": "^3.0.48",
+    "aws-amplify": "^4.3.30"
+  }
+}
